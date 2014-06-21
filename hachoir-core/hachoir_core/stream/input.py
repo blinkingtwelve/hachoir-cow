@@ -9,6 +9,7 @@ from hachoir_core.tools import alignValue
 from errno import ESPIPE
 from weakref import ref as weakref_ref
 from hachoir_core.stream import StreamError
+import mmap
 
 class InputStreamError(StreamError):
     pass
@@ -257,6 +258,8 @@ class InputStream(Logger):
     def file(self):
         return FileFromInputStream(self)
 
+    def patch(self, absolute_pos, replacement_bytes):
+        raise NotImplementedError('This input stream does not provide patch(). Try the MmapCowStream.')
 
 class InputPipe(object):
     """
@@ -417,6 +420,24 @@ class InputIOStream(InputStream):
             new_file.seek(0)
             return new_file
         return InputStream.file(self)
+
+
+class InputMmapCowStream(InputIOStream):
+    def __init__(self, inputio, source=None, size=0, offset=0, **args):
+        if size == None: size = 0
+        if (offset % mmap.PAGESIZE):
+            raise InputStreamError(_("Offset %d is not a multiple of the pagesize (%d)") % (offset, mmap.PAGESIZE))
+        cow = mmap.mmap(inputio.fileno(), size, access=mmap.ACCESS_COPY, offset=offset)
+        if not size:
+            size = cow.size() - offset
+        self._input = cow
+        self.patchable = True
+        InputStream.__init__(self, size=size*8, **args)
+
+    def patch(self, absolute_pos, replacement_bytes):
+        '''COW-replaces bytes in input stream, by absolute position.'''
+        self._input[absolute_pos:absolute_pos+len(replacement_bytes)] = replacement_bytes
+        self.info('Patching position %d to %s' % (absolute_pos, replacement_bytes))
 
 
 class StringInputStream(InputStream):

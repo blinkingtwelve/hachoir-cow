@@ -1,5 +1,5 @@
 from hachoir_core.i18n import getTerminalCharset, guessBytesCharset, _
-from hachoir_core.stream import InputIOStream, InputSubStream, InputStreamError
+from hachoir_core.stream import InputIOStream, InputMmapCowStream, InputSubStream, InputStreamError
 
 def FileInputStream(filename, real_filename=None, **args):
     """
@@ -22,6 +22,9 @@ def FileInputStream(filename, real_filename=None, **args):
     source = "file:" + filename
     offset = args.pop("offset", 0)
     size = args.pop("size", None)
+    mmapcow = bool(args.pop("mmapcow", False))
+    if mmapcow:
+        return InputMmapCowStream(inputio, source=source, size=size, offset=offset)
     if offset or size:
         if size:
             size = 8 * size
