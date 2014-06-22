@@ -57,7 +57,7 @@ class NodeHeaderFlags(StaticFieldSet):
 class FixupArray(FieldSet):
     def createFields(self):
         yield RawBytes(self, "fixup", 2)
-        while self._current_size < self._size: #but please initialize me with a size!
+        while self._current_size < self._size: # but please initialize me with a size!
             yield RawBytes(self, 'replacement[]', 2)
 
     def createDescription(self):
@@ -100,7 +100,7 @@ class Attribute(FieldSet):
         else:
             yield NonresidentAttributeHeader(self, 'nonresident_header', 'Nonresident attribute header')
 
-        #per Linux-NTFS documentation
+        # per Linux-NTFS documentation
         yield UInt8(self, "indexed_flag")
         yield NullBytes(self, "padding[]", 1)
 
@@ -110,7 +110,7 @@ class Attribute(FieldSet):
                 yield RawBytes(self, "slack[]", seekfwd)
             yield String(self, "name", self["name_length"].value*2, charset="UTF-16-LE")
 
-        if self.isres: #descend into resident attribute data
+        if self.isres: # descend into resident attribute data
             content_offset = self['resident_header']['offset'].value
             content_len    = self['resident_header']['length'].value
             seekfwd = (content_offset - (self._current_size // 8))
@@ -182,7 +182,7 @@ class IndexRoot(FieldSet):
         yield UInt8(self,"ixrecsz(c)", "size of each index record (clusters)")
         yield PaddingBytes(self, "padding[]", 3)
         yield IndexNodeHeader(self, 'nodeheader')
-        while self._current_size//8 <= self['nodeheader/used_offset'].value: #<=; for the lists ends with an empty entry with 'last' flag set
+        while self._current_size//8 <= self['nodeheader/used_offset'].value: # <=; for the lists ends with an empty entry with 'last' flag set
             yield DirectoryIndexEntry(self, 'entry[]')
 
 
@@ -215,7 +215,7 @@ class DirectoryIndexEntry(FieldSet):
             yield FileName(self, 'filename', size=self['fname_attrib_len'].value*8)
         seekfwd = self['entry_len'].value - self._current_size // 8
         if self['flags/Child node exists'].value:
-            #last 8 bytes will point to VCN. should start on 8-byte boundary.
+            # last 8 bytes will point to VCN. should start on 8-byte boundary.
             seektofield = seekfwd - 8
             if seektofield >= 0:
                 yield RawBytes(self, "padding[]", seektofield)
@@ -226,6 +226,7 @@ class DirectoryIndexEntry(FieldSet):
 
 class FileName(FieldSet):
     #Carrier 362 13.7
+
     def createFields(self):
         yield UInt64(self, "ref", "File reference to the parent directory")
         yield TimestampWin64(self, "btime", "File Birth")
@@ -261,8 +262,11 @@ class File(FieldSet):
             log.warning('Cannot apply NTFS fixups as input stream is non-patchable')
 
     def applyFixups(self):
-        #On-disk data is actually intentionally corrupted, see Carrier 352.
-        #We need to fix the data before it's parsed.
+        # On-disk data is actually intentionally predictably corrupted, see Carrier 352.
+        # and also http://web.archive.org/web/20061209150816/http://www.linux-ntfs.org/content/view/104/43/#concept_fixup
+        # The corruption is reversible. This should be done before the
+        # on-disk structures are actually parsed.
+        # It's a rather unorthodox method for integrity checking.
         addr = self.absolute_address // 8
         fixup_amt = self['fixup_len'].value - 1
         repval = self['fixups/fixup'].value
@@ -320,16 +324,23 @@ class File(FieldSet):
 
     def createDescription(self):
         text = "File"
-        if "filename/FILE_NAME/name" in self:
-            text += ' "%s"' % self["filename/FILE_NAME/name"].value
-        if "filename/FILE_NAME/real_size" in self:
-            text += ' (%s)' % self["filename/FILE_NAME/real_size"].display
+        if "filename/FILE_NAME[0]/name" in self:
+            text += ' "%s"' % self["filename/FILE_NAME[0]/name"].value
+        if "filename/FILE_NAME[0]/real_size" in self:
+            text += ' (%s)' % self["filename/FILE_NAME[0]/real_size"].display
         if "standard_info/STANDARD_INFORMATION/file_attr" in self:
             text += ', %s' % self["standard_info/STANDARD_INFORMATION/file_attr"].display
         return text
 
 class MFT(Parser):
-    #MFT may be fragmented. Extract it with 'icat /path/to/NTFSpartition 0 > MFT.img
+    # MFT may be fragmented. The layout of the MFT is is specified in the
+    # $MFT (entry 0); so we need to parse the MFT to *fully* determine
+    # where we can find the MFT. It sounds circular, and it is, to some extent.
+    # While this parser will to some extent work if started at the MFT offset
+    # specified in the volume's boot record, it's not the best way.
+    # For now, extract the MFT from an NTFS partition with the Sleuthkit's icat:
+    #   icat /path/to/NTFSvolume 0 > MFT.img
+    # and then run this parser on the resulting MFT file.
     MAGIC = "FILE"
     PARSER_TAGS = {
         "id": "mft",
@@ -340,35 +351,31 @@ class MFT(Parser):
     }
     endian = LITTLE_ENDIAN
 
-    def validate(self):
-        pass
-        #~ if self.stream.readBytes(0, len(self.MAGIC)) != self.MAGIC:
-            #~ return "Invalid magic string"
-        #~ return True
-
     def createFields(self):
         while not self.eof:
             yield File(self, "file[]")
 
 
 ATTR_INFO = {
-     0x10: ('standard_info', 'STANDARD_INFORMATION', StandardInformation),
-     0x20: ('attr_list', 'ATTRIBUTE_LIST', None),
-     0x30: ('filename', 'FILE_NAME', FileName),
-     0x40: ('vol_ver', 'VOLUME_VERSION', None),
-     0x40: ('obj_id', 'OBJECT_ID', None),
-     0x50: ('security', 'SECURITY_DESCRIPTOR', None),
-     0x60: ('vol_name', 'VOLUME_NAME', None),
-     0x70: ('vol_info', 'VOLUME_INFORMATION', None),
-     0x80: ('data', 'DATA', Data),
-     0x90: ('index_root', 'INDEX_ROOT', IndexRoot),
-     0xA0: ('index_alloc', 'INDEX_ALLOCATION', None),
-     0xB0: ('bitmap', 'BITMAP', Bitmap),
-     0xC0: ('sym_link', 'SYMBOLIC_LINK', None),
-     0xC0: ('reparse', 'REPARSE_POINT', None),
-     0xD0: ('ea_info', 'EA_INFORMATION', None),
-     0xE0: ('ea', 'EA', None),
-     0xF0: ('prop_set', 'PROPERTY_SET', None),
+    # type id, friendly name, official name + '[]' if multiple attributes of
+    # this type could be present in enveloping class, handling class)
+    0x10: ('standard_info', 'STANDARD_INFORMATION', StandardInformation),
+    0x20: ('attr_list', 'ATTRIBUTE_LIST', None),
+    0x30: ('filename', 'FILE_NAME[]', FileName),
+    0x40: ('vol_ver', 'VOLUME_VERSION', None),
+    0x40: ('obj_id', 'OBJECT_ID', None),
+    0x50: ('security', 'SECURITY_DESCRIPTOR', None),
+    0x60: ('vol_name', 'VOLUME_NAME', None),
+    0x70: ('vol_info', 'VOLUME_INFORMATION', None),
+    0x80: ('data', 'DATA', Data),
+    0x90: ('index_root', 'INDEX_ROOT', IndexRoot),
+    0xA0: ('index_alloc', 'INDEX_ALLOCATION', None),
+    0xB0: ('bitmap', 'BITMAP', Bitmap),
+    0xC0: ('sym_link', 'SYMBOLIC_LINK', None),
+    0xC0: ('reparse', 'REPARSE_POINT', None),
+    0xD0: ('ea_info', 'EA_INFORMATION', None),
+    0xE0: ('ea', 'EA', None),
+    0xF0: ('prop_set', 'PROPERTY_SET', None),
     0x100: ('log_util', 'LOGGED_UTILITY_STREAM', None),
 }
 ATTR_NAME = createDict(ATTR_INFO, 0)
