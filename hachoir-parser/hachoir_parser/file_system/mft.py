@@ -259,7 +259,7 @@ class File(FieldSet):
         if hasattr(self.stream, 'patchable'):
             self.applyFixups()
         else:
-            log.warning('Cannot apply NTFS fixups as input stream is non-patchable')
+            self.info('Cannot apply NTFS fixups as input stream is non-patchable')
 
     @property
     def mftref(self):
@@ -279,9 +279,10 @@ class File(FieldSet):
         vals = [f.value for f in self['fixups'].array('replacement')]
         addresses = [addr-2 + SECTOR_SIZE + num*SECTOR_SIZE for num in range(len(vals))]
         # the addresses should currently hold the replacement value
-        from binascii import hexlify as hx
         cur_val = set((self.stream._input[a:a+2] for a in addresses))
-        assert((len(cur_val) == 1) and (repval in cur_val)) # values should be same
+        if not ((len(cur_val) == 1) and (repval in cur_val)):
+            # values should be same
+            self.warning('fixup array inconsistent with content, expected: %s, got: %s' % (repval, vals))
         for args in zip(addresses, vals):
             self.stream.patch(*args)
 
