@@ -46,6 +46,8 @@ class GenericFieldSet(BasicFieldSet):
 
     _current_size = 0
 
+    __slots__ = ['_fields', '_field_generator', '_array_cache', '__is_feeding', '_current_size', '_size' ]
+    
     def __init__(self, parent, name, stream, description=None, size=None):
         """
         Constructor

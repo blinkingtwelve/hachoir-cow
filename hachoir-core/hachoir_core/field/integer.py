@@ -7,6 +7,7 @@ Integer field classes:
 from hachoir_core.field import Bits, FieldError
 
 class GenericInteger(Bits):
+    __slots__=['signed']
     """
     Generic integer class used to generate other classes.
     """

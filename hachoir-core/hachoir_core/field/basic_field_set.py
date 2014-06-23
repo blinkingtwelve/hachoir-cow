@@ -25,6 +25,8 @@ class BasicFieldSet(Field):
     is_field_set = True
     endian = None
 
+    #__slots__=['stream', '_field_array_count', 'root', '_global_event_handler']
+
     def __init__(self, parent, name, stream, description, size):
         # Sanity checks (preconditions)
         assert not parent or issubclass(parent.__class__, BasicFieldSet)

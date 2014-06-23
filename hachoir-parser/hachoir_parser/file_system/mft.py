@@ -39,6 +39,7 @@ FILENAME_NAMESPACE = {
 
 class IndexEntryFlags(StaticFieldSet):
     #Carrier 375 13.16
+    __slots__=[]
     format = (
     (Bit, "Child node exists"),
     (Bit, "Last entry in list"),
@@ -48,6 +49,7 @@ class IndexEntryFlags(StaticFieldSet):
 
 class NodeHeaderFlags(StaticFieldSet):
     #Carrier 373
+    __slots__=[]
     format = (
     (Bit, "haschildren"),
     (NullBits, "reserved[]", 31),
@@ -55,6 +57,7 @@ class NodeHeaderFlags(StaticFieldSet):
 
 
 class FixupArray(FieldSet):
+    __slots__=[]
     def createFields(self):
         yield RawBytes(self, "fixup", 2)
         while self._current_size < self._size: # but please initialize me with a size!
@@ -66,6 +69,7 @@ class FixupArray(FieldSet):
 
 
 class MFT_Flags(FieldSet):
+    __slots__=[]
     static_size = 16
     def createFields(self):
         yield Bit(self, "in_use")
@@ -74,6 +78,8 @@ class MFT_Flags(FieldSet):
 
 
 class Attribute(FieldSet):
+
+    __slots__=['isres']
     
     def __init__(self, *args):
         FieldSet.__init__(self, *args)
@@ -245,6 +251,7 @@ class FileName(FieldSet):
 
 
 class Bitmap(FieldSet):
+    __slots__=[]
     def createFields(self):
         size = (self.size - self.current_size)
         for index in xrange(size):
@@ -253,6 +260,7 @@ class Bitmap(FieldSet):
 
 class File(FieldSet):
     #Carrier 353 13.1
+    __slots__=[]
     def __init__(self, *args):
         FieldSet.__init__(self, *args)
         self._size = self["bytes_allocated"].value * 8
@@ -340,6 +348,7 @@ class File(FieldSet):
         return text
 
 class MFT(Parser):
+    __slots__=[]
     # MFT may be fragmented. The layout of the MFT is is specified in the
     # $MFT (entry 0); so we need to parse the MFT to *fully* determine
     # where we can find the MFT. It sounds circular, and it is, to some extent.

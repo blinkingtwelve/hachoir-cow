@@ -10,6 +10,7 @@ from hachoir_core.i18n import _
 from hachoir_core import config
 
 class RawBits(Field):
+    __slots__=[]
     """
     Unknown content with a size in bits.
     """
@@ -37,6 +38,7 @@ class RawBits(Field):
     createRawDisplay = createDisplay
 
 class Bits(RawBits):
+    __slots__=[]
     """
     Positive integer with a size in bits
 

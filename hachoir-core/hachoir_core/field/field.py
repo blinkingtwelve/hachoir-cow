@@ -37,6 +37,8 @@ class MissingField(KeyError, FieldError):
         return u'Can\'t get field "%s" from %s' % (self.key, self.field.path)
 
 class Field(Logger):
+
+    __slots__ = ['_parent', '_name', '_address', '_size', '_description', '__display', '__raw_display', '_sub_istream']
     # static size can have two differents value: None (no static size), an
     # integer (number of bits), or a function which returns an integer.
     #

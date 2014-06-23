@@ -134,6 +134,9 @@ class Log:
 log = Log()
 
 class Logger(object):
+    
+    __slots__ = []
+    
     def _logger(self):
         return "<%s>" % self.__class__.__name__
     def info(self, text):
