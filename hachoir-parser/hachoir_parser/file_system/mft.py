@@ -228,7 +228,7 @@ class FileName(FieldSet):
     #Carrier 362 13.7
 
     def createFields(self):
-        yield UInt64(self, "ref", "File reference to the parent directory")
+        yield UInt64(self, "mftref", "File reference to the parent directory")
         yield TimestampWin64(self, "btime", "File Birth")
         yield TimestampWin64(self, "mtime", "File Modified")
         yield TimestampWin64(self, "ctime", "MFT Entry Changed")
@@ -260,6 +260,12 @@ class File(FieldSet):
             self.applyFixups()
         else:
             log.warning('Cannot apply NTFS fixups as input stream is non-patchable')
+
+    @property
+    def mftref(self):
+        # Carrier 277
+        # Assumes address 0 == start of MFT.
+        return (self.address // self.size + self['sequence_number'].value * 2**48)
 
     def applyFixups(self):
         # On-disk data is actually intentionally predictably corrupted, see Carrier 352.
