@@ -78,7 +78,7 @@ class Attribute(FieldSet):
     def __init__(self, *args):
         FieldSet.__init__(self, *args)
         self._size = self["size"].value * 8
-        self._name = ATTR_NAME.get(self['type'], str(self['type']))
+        self._name = ATTR_NAME.get(self['type'].value, str(self['type']))
         self.isres = not bool(self['non_resident'].value)
 
     def createDescription(self):
@@ -87,7 +87,7 @@ class Attribute(FieldSet):
 
     def createFields(self):
         #first 16 bytes, Carrier 356 13.2
-        yield Enum(textHandler(UInt32(self, "type"), hexadecimal), ATTR_NAME)
+        yield Enum(textHandler(UInt32(self, "type"), hexadecimal), ATTR_UPNAME)
         yield UInt32(self, "size", "Total size of attribute")
         yield UInt8(self, "non_resident", "Non-resident flag")
         yield UInt8(self, "name_length", "Name length (in UTF-16 chars)")
@@ -324,10 +324,10 @@ class File(FieldSet):
 
     def createDescription(self):
         text = "File"
-        if "filename/FILE_NAME[0]/name" in self:
-            text += ' "%s"' % self["filename/FILE_NAME[0]/name"].value
-        if "filename/FILE_NAME[0]/real_size" in self:
-            text += ' (%s)' % self["filename/FILE_NAME[0]/real_size"].display
+        if "filename[0]/FILE_NAME/name" in self:
+            text += ' "%s"' % self["filename[0]/FILE_NAME/name"].value
+        if "filename[0]/FILE_NAME/real_size" in self:
+            text += ' (%s)' % self["filename[0]/FILE_NAME/real_size"].display
         if "standard_info/STANDARD_INFORMATION/file_attr" in self:
             text += ', %s' % self["standard_info/STANDARD_INFORMATION/file_attr"].display
         return text
@@ -361,14 +361,14 @@ ATTR_INFO = {
     # this type could be present in enveloping class, handling class)
     0x10: ('standard_info', 'STANDARD_INFORMATION', StandardInformation),
     0x20: ('attr_list', 'ATTRIBUTE_LIST', None),
-    0x30: ('filename', 'FILE_NAME[]', FileName),
+    0x30: ('filename[]', 'FILE_NAME', FileName),
     0x40: ('vol_ver', 'VOLUME_VERSION', None),
     0x40: ('obj_id', 'OBJECT_ID', None),
     0x50: ('security', 'SECURITY_DESCRIPTOR', None),
     0x60: ('vol_name', 'VOLUME_NAME', None),
     0x70: ('vol_info', 'VOLUME_INFORMATION', None),
-    0x80: ('data', 'DATA', Data),
-    0x90: ('index_root', 'INDEX_ROOT', IndexRoot),
+    0x80: ('data[]', 'DATA', Data),
+    0x90: ('index_root[]', 'INDEX_ROOT', IndexRoot),
     0xA0: ('index_alloc', 'INDEX_ALLOCATION', None),
     0xB0: ('bitmap', 'BITMAP', Bitmap),
     0xC0: ('sym_link', 'SYMBOLIC_LINK', None),
