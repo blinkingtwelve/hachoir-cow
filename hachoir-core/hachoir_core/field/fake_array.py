@@ -1,7 +1,7 @@
 import itertools
 from hachoir_core.field import MissingField
 
-class FakeArray:
+class FakeArray(object):
     """
     Simulate an array for GenericFieldSet.array(): fielset.array("item")[0] is
     equivalent to fielset.array("item[0]").
@@ -13,6 +13,7 @@ class FakeArray:
 
     And to get array size using len(fieldset.array("item")).
     """
+    __slots__=['_max_index', 'fieldset', 'name', '_format', '_known_size', '_cache']
     def __init__(self, fieldset, name):
         pos = name.rfind("/")
         if pos != -1:

@@ -38,7 +38,7 @@ class MissingField(KeyError, FieldError):
 
 class Field(Logger):
 
-    __slots__ = ['_parent', '_name', '_address', '_size', '_description', '__display', '__raw_display', '_sub_istream']
+    __slots__ = ['_parent', '_name', '_address', '_size', '_description', '__display', '__raw_display', '_sub_istream', '_value']
     # static size can have two differents value: None (no static size), an
     # integer (number of bits), or a function which returns an integer.
     #
@@ -113,10 +113,10 @@ class Field(Logger):
     def _getValue(self):
         try:
             value = self.createValue()
+            self._value = value
         except HACHOIR_ERRORS, err:
             self.error(_("Unable to create value: %s") % unicode(err))
             value = None
-        self._getValue = lambda: value
         return value
     value = property(lambda self: self._getValue(), doc="Value of field")
 

@@ -16,6 +16,7 @@ class RawBytes(Field):
 
     @see: L{Bytes}
     """
+    __slots__=['_display']
     static_size = staticmethod(lambda *args, **kw: args[1]*8)
 
     def __init__(self, parent, name, length, description="Raw data"):
