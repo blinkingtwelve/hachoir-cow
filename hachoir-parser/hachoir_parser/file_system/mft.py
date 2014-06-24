@@ -267,7 +267,7 @@ class File(FieldSet):
         if hasattr(self.stream, 'patchable'):
             self.applyFixups()
         else:
-            self.info('Cannot apply NTFS fixups as input stream is non-patchable')
+            self.warning('Cannot apply NTFS fixups as input stream is non-patchable')
 
     @property
     def mftref(self):
@@ -370,7 +370,6 @@ class MFT(Parser):
     def createFields(self):
         while not self.eof:
             yield File(self, "file[]")
-
 
 ATTR_INFO = {
     # type id, friendly name, official name + '[]' if multiple attributes of

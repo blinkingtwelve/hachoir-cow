@@ -432,7 +432,7 @@ class InputMmapCowStream(InputIOStream):
             size = cow.size() - offset
         self._input = cow
         self.patchable = True
-        InputStream.__init__(self, size=size*8, **args)
+        InputStream.__init__(self, size=size*8, source=source, **args)
 
     def patch(self, absolute_pos, replacement_bytes):
         '''COW-replaces bytes in input stream, by absolute position.'''

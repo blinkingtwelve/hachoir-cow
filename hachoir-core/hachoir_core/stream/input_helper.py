@@ -24,7 +24,7 @@ def FileInputStream(filename, real_filename=None, **args):
     size = args.pop("size", None)
     mmapcow = bool(args.pop("mmapcow", False))
     if mmapcow:
-        return InputMmapCowStream(inputio, source=source, size=size, offset=offset)
+        return InputMmapCowStream(inputio, source=source, size=size, offset=offset, **args)
     if offset or size:
         if size:
             size = 8 * size

@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python2
 from hachoir_core.cmd_line import (getHachoirOptions,
     configureHachoir, unicodeFilename)
 from hachoir_core.stream import InputStreamError, FileInputStream
@@ -33,6 +33,8 @@ def parseOptions():
         type="str", action="store", default=None)
     common.add_option("--offset", help=_("Skip first bytes of input file"),
         type="long", action="store", default=0)
+    common.add_option("--mmapcow", help=_("Use the InputMmapCowStream to allow copy-on-write patching of the input file"),
+        action="store_true", default=False)
     common.add_option("--parser-list",help=_("List all parsers then exit"),
         action="callback", callback=displayParserList)
     common.add_option("--profiler", help=_("Run profiler"),
@@ -62,13 +64,13 @@ def profile(func, *args):
     from hachoir_core.profiler import runProfiler
     runProfiler(func, args)
 
-def openParser(parser_id, filename, offset, size):
+def openParser(parser_id, filename, offset, size, mmapcow):
     tags = []
     if parser_id:
         tags += [ ("id", parser_id), None ]
     try:
         stream = FileInputStream(unicodeFilename(filename), filename,
-                                 offset=offset, size=size, tags=tags)
+                                 offset=offset, size=size, tags=tags, mmapcow=mmapcow)
     except InputStreamError, err:
         return None, _("Unable to open file: %s") % err
     parser = guessParser(stream)
@@ -82,7 +84,7 @@ def main():
     configureHachoir(values)
 
     # Open file and create parser
-    parser, err = openParser(values.parser, filename, values.offset, values.size)
+    parser, err = openParser(values.parser, filename, values.offset, values.size, values.mmapcow)
     if err:
         print err
         sys.exit(1)
