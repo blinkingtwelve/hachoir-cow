@@ -273,7 +273,7 @@ class File(FieldSet):
     def mftref(self):
         # Carrier 277
         # Assumes address 0 == start of MFT.
-        return (self.address // self.size + self['sequence_number'].value * 2**48)
+        return self['mft_record_number'].value + (self['sequence_number'].value * 2**48)
 
     def applyFixups(self):
         # On-disk data is actually intentionally predictably corrupted, see Carrier 352.
