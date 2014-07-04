@@ -182,7 +182,7 @@ class StandardInformation(FieldSet):
 class IndexRoot(FieldSet):
     # Carrier 370 13.12
     def createFields(self):
-        yield Enum(textHandler(UInt32(self, "ixtype", "indexed attribute type"), hexadecimal), ATTR_NAME)
+        yield Enum(textHandler(UInt32(self, "ixtype", "indexed attribute type"), hexadecimal), ATTR_UPNAME)
         yield UInt32(self, "collsort", "collation sorting rule")
         yield UInt32(self,"ixrecsz(b)", "size of each index record (bytes)")
         yield UInt8(self,"ixrecsz(c)", "size of each index record (clusters)")
@@ -272,7 +272,6 @@ class File(FieldSet):
     @property
     def mftref(self):
         # Carrier 277
-        # Assumes address 0 == start of MFT.
         return self['mft_record_number'].value + (self['sequence_number'].value * 2**48)
 
     def applyFixups(self):
