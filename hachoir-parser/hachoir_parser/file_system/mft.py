@@ -108,11 +108,11 @@ class Attribute(FieldSet):
 
         # per Linux-NTFS documentation
         yield UInt8(self, "indexed_flag")
-        yield NullBytes(self, "padding[]", 1)
+        yield RawBytes(self, "padding[]", 1)
 
         if self["name_length"].value: #this is a named attribute
             seekfwd = (self["name_offset"].value - (self._current_size // 8))
-            if seekfwd:
+            if seekfwd > 0:
                 yield RawBytes(self, "slack[]", seekfwd)
             yield String(self, "name", self["name_length"].value*2, charset="UTF-16-LE")
 
@@ -337,13 +337,16 @@ class File(FieldSet):
             yield RawBytes(self, "slack", size, "Unused but allocated bytes")
 
     def createDescription(self):
-        text = "File"
-        if "filename[0]/FILE_NAME/name" in self:
-            text += ' "%s"' % self["filename[0]/FILE_NAME/name"].value
-        if "filename[0]/FILE_NAME/real_size" in self:
-            text += ' (%s)' % self["filename[0]/FILE_NAME/real_size"].display
+        text = "entry"
+        fnames = sorted([ e['FILE_NAME/name'].value for e in self.array('filename')], key=lambda a: len(a), reverse=True)
+        if fnames: text+= ' "%s"' % fnames[0]
+        datasz = [e['nonresident_header/actual_size'].value for e in self.array('data') if 'nonresident_header/actual_size' in e]
+        datasz+= [e['resident_header/length'].value for e in self.array('data') if 'resident_header/length' in e]
+        datasz.sort()
         if "standard_info/STANDARD_INFORMATION/file_attr" in self:
             text += ', %s' % self["standard_info/STANDARD_INFORMATION/file_attr"].display
+        if datasz:
+            text+= ', datasize: %s' % '/'.join([str(sz) for sz in datasz])
         return text
 
 class MFT(Parser):
@@ -383,8 +386,8 @@ ATTR_INFO = {
     0x70: ('vol_info', 'VOLUME_INFORMATION', None),
     0x80: ('data[]', 'DATA', Data),
     0x90: ('index_root[]', 'INDEX_ROOT', IndexRoot),
-    0xA0: ('index_alloc', 'INDEX_ALLOCATION', None),
-    0xB0: ('bitmap', 'BITMAP', Bitmap),
+    0xA0: ('index_alloc[]', 'INDEX_ALLOCATION', None),
+    0xB0: ('bitmap[]', 'BITMAP', Bitmap),
     0xC0: ('sym_link', 'SYMBOLIC_LINK', None),
     0xC0: ('reparse', 'REPARSE_POINT', None),
     0xD0: ('ea_info', 'EA_INFORMATION', None),
