@@ -163,7 +163,6 @@ class NonresidentAttributeHeader(FieldSet):
 
 class StandardInformation(FieldSet):
     #Carrier 360 13.5
-    static_size = 72*8
     def createFields(self):
         yield TimestampWin64(self, "btime", "File Birth")
         yield TimestampWin64(self, "mtime", "File Modified")
@@ -173,6 +172,7 @@ class StandardInformation(FieldSet):
         yield UInt32(self, "max_version", "Maximum Number of Versions")
         yield UInt32(self, "version", "Version Number")
         yield UInt32(self, "class_id")
+        # since NTFS 3.0, win2K
         yield UInt32(self, "owner_id")
         yield UInt32(self, "security_id")
         yield filesizeHandler(UInt64(self, "quota_charged", "Quota Charged"))
@@ -258,6 +258,27 @@ class Bitmap(FieldSet):
             yield Bit(self, "bit[]")
 
 
+class Slot(FieldSet):
+    __slots__=[]
+    def __init__(self, *args):
+        FieldSet.__init__(self, *args)
+        self._size = 1024 * 8
+        
+
+    def createFields(self):
+        addr = self.absolute_address // 8
+        header = self.stream._input[addr:addr+4]
+        if header == b'FILE':
+            yield File(self, "file")
+        elif header == b'BAAD':
+            yield RawBytes(self, "baad", 1024, "Slot marked corrupt")
+        elif self.stream._input[addr:addr+1024] == 1024*b'\x00':
+            yield RawBytes(self, "empty", 1024, "Empty (zeroed) slot")
+        else:
+            open('/scratch/gekentries/%d' % addr,'wtb').write(self.stream._input[addr:addr+1024])
+            yield RawBytes(self, "unknown", 1024, "Unknown content")
+
+
 class File(FieldSet):
     #Carrier 353 13.1
     __slots__=[]
@@ -306,16 +327,18 @@ class File(FieldSet):
         yield UInt32(self, "bytes_allocated", "Number of bytes allocated for this record")
         yield UInt64(self, "base_mft_record")
         yield UInt16(self, "next_attr_instance")
-
-        # The below fields are specific to NTFS 3.1+ (Windows XP and above)
-        yield NullBytes(self, "reserved", 2)
-        yield UInt32(self, "mft_record_number", "Number of this mft record")
-
-        seekfwd = self['fixup_offset'].value - self._current_size //8
-        if seekfwd:
-            yield RawBytes(self, "padding[]", seekfwd)
-
-        yield FixupArray(self,'fixups',size=self['fixup_len'].value*2*8)
+        
+        # have we reached the fixup yet?
+        if 0 == (self['fixup_offset'].value - self._current_size //8):
+            yield FixupArray(self,'fixups',size=self['fixup_len'].value*2*8)
+        else: #then we're on the new format
+            # The below fields are specific to NTFS 3.1+ (Windows XP and above)
+            yield NullBytes(self, "reserved", 2)
+            yield UInt32(self, "mft_record_number", "Number of this mft record")
+            seekfwd = self['fixup_offset'].value - self._current_size //8
+            if seekfwd:
+                yield RawBytes(self, "padding[]", seekfwd)
+            yield FixupArray(self,'fixups',size=self['fixup_len'].value*2*8)
 
         seekfwd = self['attrs_offset'].value - self._current_size //8
         if seekfwd:
@@ -371,7 +394,7 @@ class MFT(Parser):
 
     def createFields(self):
         while not self.eof:
-            yield File(self, "file[]")
+            yield Slot(self, "slot[]")
 
 ATTR_INFO = {
     # type id, friendly name, official name + '[]' if multiple attributes of
