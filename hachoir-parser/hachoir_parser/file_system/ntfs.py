@@ -22,7 +22,7 @@ from hachoir_core.endian import LITTLE_ENDIAN
 from hachoir_core.text_handler import textHandler, hexadecimal, filesizeHandler
 from hachoir_core.tools import humanFilesize, createDict
 from hachoir_parser.common.msdos import MSDOSFileAttr32
-from hachoir_parser.file_system.mft import File
+from hachoir_parser.file_system.mft import Slot
 
 class BiosParameterBlock(FieldSet):
     """
@@ -113,7 +113,7 @@ class NTFS(Parser):
         if padding:
             yield padding
         for index in xrange(1000):
-            yield File(self, "file[]")
+            yield Slot(self, "slot[]")
 
         size = (self.size - self.current_size) // 8
         if size:
