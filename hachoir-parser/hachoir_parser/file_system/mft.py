@@ -20,9 +20,9 @@ from hachoir_core.endian import LITTLE_ENDIAN
 from hachoir_core.text_handler import textHandler, hexadecimal, filesizeHandler
 from hachoir_core.tools import humanFilesize, createDict
 from hachoir_parser.common.msdos import MSDOSFileAttr32
-
 from hachoir_core.log import log
 import struct
+from binascii import hexlify
 
 SECTOR_SIZE = 512
 
@@ -310,7 +310,7 @@ class File(FieldSet):
         cur_val = set((self.stream._input[a:a+2] for a in addresses))
         if not ((len(cur_val) == 1) and (repval in cur_val)):
             # values should be same
-            self.warning('fixup array inconsistent with content, expected: %s, got: %s' % (repval, vals))
+            self.warning('fixup array inconsistent with content, expected: %s, got: %s' % (hexlify(repval), vals))
         for args in zip(addresses, vals):
             self.stream.patch(*args)
 
